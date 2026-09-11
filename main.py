@@ -1,7 +1,12 @@
 # Это программа на Python
-# Импортируем модуль PyQt5
-from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtGui import QIcon
+# Импортируем модуль PyQt6
+from PyQt6 import QtWidgets, QtCore, QtGui
+from PyQt6.QtGui import QIcon
+import os
+
+# Путь к иконке — рядом со скриптом, чтобы находился при любом запуске
+ICON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.jpg")
+
 
 # Создаем класс для секундомера
 class Stopwatch(QtWidgets.QWidget):
@@ -14,142 +19,103 @@ class Stopwatch(QtWidgets.QWidget):
         self.resize(300, 200)
         # Устанавливаем положение окна ниже и левее
         self.move(3, 625)
-        # Создаем переменные для хранения времени
-        self.hours = 0
-        self.minutes = 0
-        self.seconds = 0
+
+        # Накопленные миллисекунды (для паузы) и монотонный таймер для точного счёта
+        self.accumulated_ms = 0
+        self.elapsed_timer = QtCore.QElapsedTimer()
+
         # Создаем виджеты для отображения времени
-        self.hours_label = QtWidgets.QLabel(str(self.hours), font=QtGui.QFont("Arial", 50))
-        self.minutes_label = QtWidgets.QLabel(str(self.minutes), font=QtGui.QFont("Arial", 50))
-        self.seconds_label = QtWidgets.QLabel(str(self.seconds), font=QtGui.QFont("Arial", 50))
-        self.colon1 = QtWidgets.QLabel(":", font=QtGui.QFont("Arial", 50))
-        self.colon2 = QtWidgets.QLabel(":", font=QtGui.QFont("Arial", 50))
-        # Создаем кнопку для запуска секундомера
+        # В PyQt6 шрифт задаётся через setFont(), а не аргументом конструктора
+        font = QtGui.QFont("Arial", 50)
+        self.hours_label = QtWidgets.QLabel("00")
+        self.minutes_label = QtWidgets.QLabel("00")
+        self.seconds_label = QtWidgets.QLabel("00")
+        self.colon1 = QtWidgets.QLabel(":")
+        self.colon2 = QtWidgets.QLabel(":")
+        for lbl in (self.hours_label, self.minutes_label,
+                    self.seconds_label, self.colon1, self.colon2):
+            lbl.setFont(font)
+
+        # Создаем кнопки запуска/остановки и сброса
         self.start_button = QtWidgets.QPushButton("Запуск")
-        # Создаем кнопку для сброса времени
         self.reset_button = QtWidgets.QPushButton("Сброс")
-        # Связываем кнопку с функцией сброса времени
-        self.reset_button.clicked.connect(self.reset_time)
-        # Создаем кнопку для запуска и остановки времени
-        self.start_button = QtWidgets.QPushButton("Запуск")
-        # Связываем кнопку с функцией запуска и остановки времени
         self.start_button.clicked.connect(self.start_stop_time)
+        self.reset_button.clicked.connect(self.reset_time)
 
-        # Создаем вертикальный компоновщик для расположения виджетов в окне
-        self.layout = QtWidgets.QVBoxLayout()
+        # Вертикальный компоновщик для окна
+        self.main_layout = QtWidgets.QVBoxLayout()
 
-        # Создаем горизонтальный компоновщик для расположения виджетов времени в одной строке
+        # Горизонтальный компоновщик для времени в одной строке
         self.time_layout = QtWidgets.QHBoxLayout()
-
-        # Добавляем виджеты времени в горизонтальный компоновщик
         self.time_layout.addWidget(self.hours_label)
         self.time_layout.addWidget(self.colon1)
         self.time_layout.addWidget(self.minutes_label)
         self.time_layout.addWidget(self.colon2)
         self.time_layout.addWidget(self.seconds_label)
+        self.main_layout.addLayout(self.time_layout)
 
-        # Добавляем горизонтальный компоновщик в вертикальный компоновщик
-        self.layout.addLayout(self.time_layout)
-
-        # Создаем горизонтальный компоновщик для расположения кнопок в одной строке
+        # Горизонтальный компоновщик для кнопок, выравниваем по центру
         self.button_layout = QtWidgets.QHBoxLayout()
-
-        # Добавляем кнопки в горизонтальный компоновщик
         self.button_layout.addWidget(self.start_button)
         self.button_layout.addWidget(self.reset_button)
-
-        # Выравниваем по центру горизонтальный компоновщик с кнопками
-        self.button_layout.setAlignment(QtCore.Qt.AlignCenter) 
-
-        # Добавляем горизонтальный компоновщик в вертикальный компоновщик
-        self.layout.addLayout(self.button_layout)
+        self.button_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.main_layout.addLayout(self.button_layout)
 
         # Устанавливаем вертикальный компоновщик в окно
-        self.setLayout(self.layout)
+        self.setLayout(self.main_layout)
 
-        # Устанавливаем цвет фона окна
+        # Цвет фона окна
         self.setStyleSheet("background-color: #272727;")
-        # Устанавливаем цвет и жирность шрифта для виджетов времени
-        self.hours_label.setStyleSheet("color: #FFFFFF; font-weight: bold;")
-        self.minutes_label.setStyleSheet("color: #FFFFFF; font-weight: bold;")
-        self.seconds_label.setStyleSheet("color: #FFFFFF; font-weight: bold;")
-        self.colon1.setStyleSheet("color: #FFFFFF; font-weight: bold;")
-        self.colon2.setStyleSheet("color: #FFFFFF; font-weight: bold;")
-        # Устанавливаем цвет и жирность шрифта для кнопки сброса
+        # Цвет и жирность шрифта для виджетов времени
+        for lbl in (self.hours_label, self.minutes_label,
+                    self.seconds_label, self.colon1, self.colon2):
+            lbl.setStyleSheet("color: #FFFFFF; font-weight: bold;")
         self.reset_button.setStyleSheet("color: #FFFFFF; font-weight: bold;")
-        # Устанавливаем цвет и жирность шрифта для кнопки "Запуск"
         self.start_button.setStyleSheet("color: #FFFFFF; font-weight: bold;")
-        # Создаем таймер для обновления времени
+
+        # Таймер обновления надписи (счёт идёт по QElapsedTimer, поэтому точность не страдает)
         self.timer = QtCore.QTimer()
-        # Устанавливаем интервал таймера в 1 секунду
-        self.timer.setInterval(1000)
-        # Связываем таймер с функцией обновления времени
+        self.timer.setInterval(200)
         self.timer.timeout.connect(self.update_time)
 
-    # Определяем функцию для обновления времени
+    # Функция обновления отображаемого времени
     def update_time(self):
-         # Увеличиваем секунды на единицу
-         self.seconds += 1
-         # Если секунды равны 60, то увеличиваем минуты на единицу и обнуляем секунды
-         if self.seconds == 60:
-             self.minutes += 1
-             self.seconds = 0
-             # Если минуты равны 60, то увеличиваем часы на единицу и обнуляем минуты
-             if self.minutes == 60:
-                 self.minutes = 0
-                 self.hours += 1
-         # Обновляем текст виджетов времени
-         self.hours_label.setText(str(self.hours))
-         self.minutes_label.setText(str(self.minutes))
-         self.seconds_label.setText(str(self.seconds))
+        total_seconds = (self.accumulated_ms + self.elapsed_timer.elapsed()) // 1000
+        self.hours = total_seconds // 3600
+        self.minutes = (total_seconds % 3600) // 60
+        self.seconds = total_seconds % 60
+        self.hours_label.setText(f"{self.hours:02d}")
+        self.minutes_label.setText(f"{self.minutes:02d}")
+        self.seconds_label.setText(f"{self.seconds:02d}")
 
-    # Создаем функцию для сброса времени
+    # Функция сброса времени
     def reset_time(self):
-         # Останавливаем таймер
-         self.timer.stop()
-         # Обнуляем все переменные времени
-         self.hours = 0
-         self.minutes = 0
-         self.seconds = 0
-         # Обновляем текст виджетов времени
-         self.hours_label.setText(str(self.hours))
-         self.minutes_label.setText(str(self.minutes))
-         self.seconds_label.setText(str(self.seconds))
-         # Меняем текст кнопки "Стоп" на "Запуск"
-         self.start_button.setText("Запуск")
+        self.timer.stop()
+        self.accumulated_ms = 0
+        self.hours_label.setText("00")
+        self.minutes_label.setText("00")
+        self.seconds_label.setText("00")
+        self.start_button.setText("Запуск")
 
-    # Создаем функцию для запуска и остановки времени
+    # Функция для запуска и остановки времени
     def start_stop_time(self):
-         # Если таймер не запущен
-         if not self.timer.isActive():
-             # Запускаем таймер
-             self.timer.start()
-             # Меняем текст кнопки "Запуск" на "Стоп"
-             self.start_button.setText("Стоп")
-         # Иначе
-         else:
-             # Останавливаем таймер
-             self.timer.stop()
-             # Меняем текст кнопки "Стоп" на "Запуск"
-             self.start_button.setText("Запуск")
+        if not self.timer.isActive():
+            self.elapsed_timer.start()
+            self.timer.start()
+            self.start_button.setText("Стоп")
+        else:
+            self.accumulated_ms += self.elapsed_timer.elapsed()
+            self.timer.stop()
+            self.start_button.setText("Запуск")
 
-# Создаем приложение PyQt5
+
+# Создаем приложение и задаем иконку
 app = QtWidgets.QApplication([])
+app.setWindowIcon(QIcon(ICON_PATH))
 
-# Задаем иконку приложения из файла favicon.jpg
-app.setWindowIcon(QIcon("favicon.jpg"))
-
-# Создаем экземпляр класса секундомера
+# Создаем и показываем окно секундомера
 stopwatch = Stopwatch()
-
-# Создаем объект QLabel
-label = QtWidgets.QLabel()
-
-# Задаем иконку окна из файла favicon.jpg
-label.setWindowIcon(QIcon("favicon.jpg"))
-
-# Показываем окно секундомера
 stopwatch.show()
 
 # Запускаем главный цикл приложения
-app.exec_()
+app.exec()
